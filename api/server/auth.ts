@@ -117,6 +117,33 @@ export function setupAuth(app: Express) {
     });
   }
 
+  passport.serializeUser((user, done) => done(null, (user as SelectUser).id));
+  passport.deserializeUser(async (id, done) => {
+    try {
+      const user = await storage.getUser(id as number);
+      done(null, user);
+    } catch (err) {
+      done(err);
+    }
+  });
+
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: SelectUser, _info: any) => {
+      if (err) {
+        return next(err);
+      }
+      if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+      }
+      req.logIn(user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.status(200).json(user);
+      });
+    })(req, res, next);
+  });
+
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
