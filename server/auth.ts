@@ -97,12 +97,11 @@ export function setupAuth(app: Express) {
             const username = email || `google_${googleId}`;
             const password = await hashPassword(randomBytes(16).toString("hex")); // Dummy password
 
-            user = await storage.createSelectUser({
+            user = await storage.createUser({
               username,
               password,
               role: "worker", // Default role
-              name: profile.displayName,
-              googleId
+              name: profile.displayName
             });
           }
 
@@ -114,10 +113,10 @@ export function setupAuth(app: Express) {
     ));
   }
 
-  passport.serializeSelectUser((user, done) => done(null, (user as SelectUser).id));
-  passport.deserializeSelectUser(async (id, done) => {
+  passport.serializeUser((user, done) => done(null, (user as SelectUser).id));
+  passport.deserializeUser(async (id, done) => {
     try {
-      const user = await storage.getSelectUser(id as number);
+      const user = await storage.getUser(id as number);
       done(null, user);
     } catch (err) {
       done(err);
