@@ -75,61 +75,8 @@ export function setupAuth(app: Express) {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: "/api/auth/google/callback",
+      proxy: true
     },
-      async (_accessToken, _refreshToken, profile, done) => {
-        try {
-          const googleId = profile.id;
-          let user = await storage.getUserByGoogleId(googleId);
-
-          if (!user) {
-            // Check if user exists by email (if username stores email)
-            const email = profile.emails?.[0]?.value;
-            if (email) {
-              user = await storage.getUserByUsername(email);
-              if (user) {
-                // Link account
-                await storage.updateUser(user.id, { googleId });
-                return done(null, user);
-              }
-            }
-
-            // Create new user
-            const username = email || `google_${googleId}`;
-            const password = await hashPassword(randomBytes(16).toString("hex")); // Dummy password
-
-            user = await storage.createUser({
-              username,
-              password,
-              role: "worker", // Default role
-              name: profile.displayName
-            });
-          }
-
-          return done(null, user);
-        } catch (err) {
-          return done(err);
-        }
-      }
-    ));
-  }
-
-  passport.serializeUser((user, done) => done(null, (user as SelectUser).id));
-  passport.deserializeUser(async (id, done) => {
-    try {
-      const user = await storage.getUser(id as number);
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  });
-
-  // Google Strategy
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    passport.use(new GoogleStrategy({
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: "/api/auth/google/callback"
-      },
       async (_accessToken, _refreshToken, profile, done) => {
         try {
           const email = profile.emails?.[0]?.value;
@@ -137,12 +84,20 @@ export function setupAuth(app: Express) {
 
           let user = await storage.getUserByUsername(email);
           if (!user) {
-            user = await storage.createUser({
-              username: email,
-              password: "google-oauth-managed",
-              role: "worker",
-              name: profile.displayName
-            });
+            // Check by Google ID too
+            user = await storage.getUserByGoogleId(profile.id);
+            if (!user) {
+              user = await storage.createUser({
+                username: email,
+                password: "google-oauth-managed",
+                role: "worker",
+                name: profile.displayName,
+                googleId: profile.id
+              });
+            }
+          } else if (!user.googleId) {
+            // Link account if email matches but Google ID is missing
+            await storage.updateUser(user.id, { googleId: profile.id });
           }
           return done(null, user);
         } catch (err) {
@@ -161,34 +116,6 @@ export function setupAuth(app: Express) {
       res.status(400).send("Google OAuth is not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to Vercel environment variables.");
     });
   }
-
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: SelectUser, _info: any) => {
-      if (err) {
-        return next(err);
-      }
-      if (!user) {
-        return res.status(401).json({ message: "Invalid username or password" });
-      }
-      req.logIn(user, (err) => {
-        if (err) {
-          return next(err);
-        }
-        return res.status(200).json(user);
-      });
-    })(req, res, next);
-  });
-
-  // Google Routes
-  app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
-
-  app.get("/api/auth/google/callback",
-    passport.authenticate("google", { failureRedirect: "/login" }),
-    (_req, res) => {
-      // Successful authentication, redirect dashboard.
-      res.redirect("/");
-    }
-  );
 
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
