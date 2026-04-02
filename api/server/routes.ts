@@ -12,6 +12,11 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // --- Health Check (Immediate) ---
+  app.get(['/api/health', '/health'], (req, res) => {
+    res.json({ status: 'ok', serverTime: new Date().toISOString() });
+  });
+
   // --- Simulation Helpers ---
   async function runEnvironmentalSimulation() {
     try {
