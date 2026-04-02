@@ -145,6 +145,11 @@ export class DatabaseStorage implements IStorage {
     return newMessage;
   }
 
+  async createPPEItem(item: InsertPPE): Promise<PPEItem> {
+    const [newItem] = await db!.insert(ppeInventory).values(item).returning();
+    return newItem;
+  }
+
   // PPE
   async getPPEItems(): Promise<PPEItem[]> {
     return await db!.select().from(ppeInventory).orderBy(desc(ppeInventory.createdAt));
@@ -334,6 +339,13 @@ export class MemStorage implements IStorage {
     const newMetric = { ...metric, id, createdAt: new Date() } as SustainabilityMetric;
     this.sustainability.set(id, newMetric);
     return newMetric;
+  }
+
+  async createPPEItem(item: InsertPPE): Promise<PPEItem> {
+    const id = this.currentId++;
+    const newItem = { ...item, id, createdAt: new Date() } as PPEItem;
+    this.ppe.set(id, newItem);
+    return newItem;
   }
 }
 
