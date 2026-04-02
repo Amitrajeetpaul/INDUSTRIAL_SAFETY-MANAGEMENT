@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Poppins:wght@300;400;500;600;700&family=Montserrat:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Industrial Safety Palette */
+  --background: 210 20% 98%;
+  --foreground: 222 47% 11%;
+
+  /* Safety Orange - Bold and Alert */
+  --primary: 14 100% 57%; 
+  --primary-foreground: 210 40% 98%;
+
+  /* Industrial Blue/Grey */
+  --secondary: 215 28% 17%;
+  --secondary-foreground: 210 40% 98%;
+
+  /* Caution Yellow */
+  --accent: 45 100% 51%;
+  --accent-foreground: 222 47% 11%;
+
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 14 100% 57%;
+  
+  --radius: 0.5rem;
+  --font-sans: 'Inter', 'Poppins', sans-serif;
+  --font-display: 'Montserrat', sans-serif;
+}
+
+.dark {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  
+  --primary: 14 100% 57%;
+  --primary-foreground: 210 40% 98%;
+
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 210 40% 98%;
+
+  --accent: 45 100% 51%;
+  --accent-foreground: 222 47% 11%;
+
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 14 100% 57%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply uppercase tracking-wide font-bold;
+  }
+}
+
+/* Custom Scrollbar for industrial feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-muted;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-primary/50 rounded hover:bg-primary transition-colors;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  @apply bg-white/80 dark:bg-black/60 backdrop-blur-md border border-white/20 dark:border-white/10 shadow-xl;
+}
+
+/* Hazard Stripes Pattern */
+.hazard-stripes {
+  background: repeating-linear-gradient(
+    45deg,
+    hsl(var(--accent)),
+    hsl(var(--accent)) 10px,
+    #000 10px,
+    #000 20px
+  );
+}
