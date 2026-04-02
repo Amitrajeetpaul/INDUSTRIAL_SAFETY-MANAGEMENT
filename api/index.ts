@@ -1,3 +1,4 @@
+// Vercel Rebuild Trigger: OAuth Configured
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 
