@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth.js";
 import { storage } from "./storage.js";
 import { db, hasDb } from "./db.js";
-import { api, environmentalMetrics, ppeInventory, safetyMeasures, trainingCertifications, sustainabilityMetrics } from "@shared/schema";
+import { api, environmentalMetrics, ppeInventory, safetyMeasures, trainingCertifications, sustainabilityMetrics } from "../shared/schema.js";
 import { z } from "zod";
 import { sendCriticalIncidentAlert } from "./email.js";
 import { eq, desc, count } from "drizzle-orm";
