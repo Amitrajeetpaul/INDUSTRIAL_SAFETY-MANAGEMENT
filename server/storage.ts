@@ -47,6 +47,7 @@ export interface IStorage {
 
   // PPE
   getPPEItems(): Promise<PPEItem[]>;
+  createPPEItem(item: InsertPPE): Promise<PPEItem>;
   updatePPEStatus(id: number, status: string): Promise<PPEItem | undefined>;
 
   // Metrics
