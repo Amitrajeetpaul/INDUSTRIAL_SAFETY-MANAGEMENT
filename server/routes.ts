@@ -1,11 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth, hashPassword } from "./auth";
-import { storage } from "./storage";
-import { db, hasDb } from "./db";
+import { setupAuth, hashPassword } from "./auth.js";
+import { storage } from "./storage.js";
+import { db, hasDb } from "./db.js";
 import { api, environmentalMetrics, ppeInventory, safetyMeasures, trainingCertifications, sustainabilityMetrics } from "@shared/schema";
 import { z } from "zod";
-import { sendCriticalIncidentAlert } from "./email";
+import { sendCriticalIncidentAlert } from "./email.js";
 import { eq, desc, count } from "drizzle-orm";
 
 export async function registerRoutes(
