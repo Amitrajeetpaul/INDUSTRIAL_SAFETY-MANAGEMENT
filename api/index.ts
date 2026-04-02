@@ -21,8 +21,12 @@ await registerRoutes(httpServer, app);
 app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal Server Error";
-  console.error(err);
-  res.status(status).json({ message });
+  console.error("Vercel API Error:", err);
+  if (err.stack) console.error(err.stack);
+  res.status(status).json({ 
+    message, 
+    error: process.env.NODE_ENV === "development" ? err.message : undefined 
+  });
 });
 
 export default app;
