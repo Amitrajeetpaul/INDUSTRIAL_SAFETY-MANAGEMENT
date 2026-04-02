@@ -29,23 +29,25 @@ export default function Sustainability() {
     refetchInterval: 10000 
   });
 
-  const recentMetrics = metrics?.slice(0, 10).reverse().map(m => ({
+  const recentMetrics = metrics?.slice(0, 15).reverse().map(m => ({
     ...m,
-    consumption: parseFloat(m.consumption),
-    carbon: parseFloat(m.carbonFootprint)
+    consumption: Math.max(0, parseFloat(String(m.consumption)) || 0),
+    carbon: Math.max(0, parseFloat(String(m.carbonFootprint)) || 0)
   })) || [];
+
   const areaGroups = metrics?.reduce((acc, m) => {
+    if (!m.area) return acc;
     if (!acc[m.area]) acc[m.area] = { consumption: 0, carbon: 0, count: 0 };
-    acc[m.area].consumption += parseFloat(m.consumption);
-    acc[m.area].carbon += parseFloat(m.carbonFootprint);
+    acc[m.area].consumption += Math.max(0, parseFloat(String(m.consumption)) || 0);
+    acc[m.area].carbon += Math.max(0, parseFloat(String(m.carbonFootprint)) || 0);
     acc[m.area].count += 1;
     return acc;
   }, {} as Record<string, { consumption: number, carbon: number, count: number }>);
 
   const barData = Object.entries(areaGroups || {}).map(([name, data]) => ({
     name,
-    consumption: Math.round(data.consumption / data.count)
-  }));
+    consumption: data.count > 0 ? Math.round(data.consumption / data.count) : 0
+  })).sort((a,b) => b.consumption - a.consumption);
 
   const COLORS = ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B"];
 

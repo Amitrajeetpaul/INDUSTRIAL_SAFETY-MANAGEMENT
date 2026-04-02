@@ -263,7 +263,9 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     await runEnergySimulation();
     const metrics = await storage.getSustainabilityMetrics();
-    res.json(metrics);
+    // Sort and limit to recent 100 for better performance
+    const sorted = [...metrics].sort((a,b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+    res.json(sorted.slice(0, 100));
   });
 
   // --- PDF Export (Mock) ---
