@@ -6,7 +6,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User } from "@shared/schema";
+import { User as SelectUser } from "@shared/schema";
 import { pool, hasDb } from "./db";
 import connectPg from "connect-pg-simple";
 import MemoryStoreFactory from "memorystore";
@@ -97,7 +97,7 @@ export function setupAuth(app: Express) {
             const username = email || `google_${googleId}`;
             const password = await hashPassword(randomBytes(16).toString("hex")); // Dummy password
 
-            user = await storage.createUser({
+            user = await storage.createSelectUser({
               username,
               password,
               role: "worker", // Default role
@@ -114,18 +114,53 @@ export function setupAuth(app: Express) {
     ));
   }
 
-  passport.serializeUser((user, done) => done(null, (user as User).id));
-  passport.deserializeUser(async (id, done) => {
+  passport.serializeSelectUser((user, done) => done(null, (user as SelectUser).id));
+  passport.deserializeSelectUser(async (id, done) => {
     try {
-      const user = await storage.getUser(id as number);
+      const user = await storage.getSelectUser(id as number);
       done(null, user);
     } catch (err) {
       done(err);
     }
   });
 
+  // Google Strategy
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(new GoogleStrategy({
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: "/api/auth/google/callback"
+      },
+      async (_accessToken, _refreshToken, profile, done) => {
+        try {
+          const email = profile.emails?.[0]?.value;
+          if (!email) return done(new Error("No email found in Google profile"));
+
+          let user = await storage.getUserByUsername(email);
+          if (!user) {
+            user = await storage.createUser({
+              username: email,
+              password: "google-oauth-managed",
+              role: "worker",
+              name: profile.displayName
+            });
+          }
+          return done(null, user);
+        } catch (err) {
+          return done(err as Error);
+        }
+      }
+    ));
+
+    app.get("/api/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+    app.get("/api/auth/google/callback", 
+      passport.authenticate("google", { failureRedirect: "/login" }),
+      (req, res) => res.redirect("/")
+    );
+  }
+
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: User, _info: any) => {
+    passport.authenticate("local", (err: any, user: SelectUser, _info: any) => {
       if (err) {
         return next(err);
       }
