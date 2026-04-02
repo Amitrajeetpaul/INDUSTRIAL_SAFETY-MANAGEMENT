@@ -12,7 +12,7 @@ import {
   type SafetyMeasure, type InsertSafetyMeasure,
   type TrainingCertification, type InsertTraining,
   type SustainabilityMetric, type InsertSustainability
-} from "@shared/schema.js";
+} from "../../shared/schema.js";
 import { eq, desc, count, sql, asc } from "drizzle-orm";
 
 export interface IStorage {
