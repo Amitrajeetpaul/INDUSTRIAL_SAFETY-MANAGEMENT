@@ -5,6 +5,7 @@ import * as schema from "@shared/schema";
 const { Pool } = pg;
 
 export const isDev = process.env.NODE_ENV !== "production";
+console.log("DB Init: hasDb =", !!process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("REPLACE_ME"));
 export const hasDb = process.env.DATABASE_URL && 
                    !process.env.DATABASE_URL.includes("REPLACE_ME") && 
                    process.env.DATABASE_URL.startsWith("postgres");

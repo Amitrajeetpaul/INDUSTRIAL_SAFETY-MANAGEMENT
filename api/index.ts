@@ -15,7 +15,14 @@ app.use((req, res, next) => {
 const httpServer = createServer(app);
 
 // Register API routes
-await registerRoutes(httpServer, app);
+console.log("Vercel Boot: Registering routes...");
+try {
+  await registerRoutes(httpServer, app);
+  console.log("Vercel Boot: Routes registered successfully.");
+} catch (error) {
+  console.error("Vercel Boot ERROR:", error);
+  throw error;
+}
 
 // Error handling
 app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

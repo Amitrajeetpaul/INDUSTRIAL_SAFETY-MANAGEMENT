@@ -11,6 +11,12 @@ import { pool, hasDb } from "./db";
 import connectPg from "connect-pg-simple";
 import MemoryStoreFactory from "memorystore";
 
+declare global {
+  namespace Express {
+    interface User extends SelectUser {}
+  }
+}
+
 const scryptAsync = promisify(scrypt);
 const PostgresSessionStore = connectPg(session);
 const MemoryStore = MemoryStoreFactory(session);
