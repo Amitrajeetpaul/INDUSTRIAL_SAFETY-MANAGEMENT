@@ -1,22 +1,23 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 
+import { registerRoutes } from "../server/routes";
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 let isInitialized = false;
+const httpServer = createServer(app);
 
 app.use(async (req, res, next) => {
   if (isInitialized) return next();
   
-  console.log("Vercel Boot: Lazy-loading dependencies...");
+  console.log("Vercel Boot: Initializing routes...");
   try {
-    const { registerRoutes } = await import("../server/routes");
-    const httpServer = createServer(app);
     await registerRoutes(httpServer, app);
     isInitialized = true;
-    console.log("Vercel Boot: Success.");
+    console.log("Vercel Boot: Registration complete.");
     next();
   } catch (err: any) {
     console.error("Vercel Boot CRASH:", err);

@@ -13,5 +13,10 @@
       "source": "/((?!assets/|favicon.png|api/).*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "server/**"
+    }
+  }
 }
