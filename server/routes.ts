@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
-import { db } from "./db";
+import { db, hasDb } from "./db";
 import { api, environmentalMetrics, ppeInventory, safetyMeasures, trainingCertifications, sustainabilityMetrics } from "@shared/schema";
 import { z } from "zod";
 import { sendCriticalIncidentAlert } from "./email";
@@ -282,11 +282,7 @@ export async function registerRoutes(
   });
 
   // --- Seed Data ---
-  if (process.env.DATABASE_URL) {
-    await seedData();
-  } else {
-    console.warn("Skipping data seeding: DATABASE_URL is missing.");
-  }
+  await seedData();
 
   // --- Live Data Simulation ---
   if (process.env.NODE_ENV !== "production") {
@@ -300,8 +296,8 @@ export async function registerRoutes(
 async function seedData() {
   const hashedPassword = await hashPassword("password123");
 
-  const users = await storage.getUserByUsername("admin");
-  if (!users) {
+  const existingAdmin = await storage.getUserByUsername("admin");
+  if (!existingAdmin) {
     // Create default users
     const adminUser = await storage.createUser({
       username: "admin",
@@ -352,14 +348,15 @@ async function seedData() {
     });
 
     // Seed Metrics
-    await db.insert(environmentalMetrics).values([
+    const metrics = [
       { type: 'air', label: 'PM2.5', value: '12', unit: 'µg/m³', status: 'optimal' },
       { type: 'air', label: 'CO2', value: '415', unit: 'ppm', status: 'optimal' },
       { type: 'water', label: 'pH Level', value: '7.2', unit: 'pH', status: 'optimal' },
       { type: 'water', label: 'Turbidity', value: '0.8', unit: 'NTU', status: 'optimal' },
       { type: 'machine', label: 'Conveyor Temp', value: '42', unit: '°C', status: 'warning' },
       { type: 'machine', label: 'Vibration', value: '2.1', unit: 'mm/s', status: 'optimal' },
-    ]);
+    ];
+    for (const m of metrics) await storage.createEnvironmentalMetric(m as any);
 
     // Seed PPE
     const now = new Date();
@@ -367,43 +364,50 @@ async function seedData() {
     const sixMonthsLater = new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000);
     const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    await db.insert(ppeInventory).values([
+    const ppeItems = [
       { name: 'Hard Hat Elite', type: 'Hard Hat', serialNumber: 'HH-001', manufactureDate: threeMonthsAgo, lastInspectionDate: threeMonthsAgo, nextInspectionDate: sixMonthsLater, status: 'ok' },
       { name: 'Safety Harness X', type: 'Harness', serialNumber: 'SH-042', manufactureDate: threeMonthsAgo, lastInspectionDate: threeMonthsAgo, nextInspectionDate: nextWeek, status: 'maintenance_due' },
       { name: 'Pro Boots 2.0', type: 'Boots', serialNumber: 'BT-999', manufactureDate: threeMonthsAgo, lastInspectionDate: threeMonthsAgo, nextInspectionDate: sixMonthsLater, status: 'ok' },
-    ]);
+    ];
+    for (const p of ppeItems) {
+      if (hasDb) {
+        await db!.insert(ppeInventory).values(p as any);
+      } else {
+        const id = (storage as any).currentId++;
+        (storage as any).ppe.set(id, { ...p, id });
+      }
+    }
 
     // Seed Safety Measures
-    await db.insert(safetyMeasures).values([
+    const safety = [
       { description: 'Improper ventilation in chemical storage', actionTaken: 'Installed industrial-grade extractor fans and upgraded sensors.', status: 'completed', completedAt: now },
       { description: 'Slippery stairs near entrance', actionTaken: 'Applied non-slip adhesive strips and added a secondary handrail.', status: 'completed', completedAt: now },
-    ]);
+    ];
+    for (const s of safety) await storage.createSafetyMeasure(s as any);
 
-    // --- Phase 2: Mandatory Seeding for Training & Sustainability ---
-    const [existingTraining] = await db.select({ count: count() }).from(trainingCertifications);
-    if (existingTraining.count === 0) {
-      const threeMonthsLater = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
-      const twoWeeksAway = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-      const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    // Seed Training
+    const threeMonthsLater = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+    const twoWeeksAway = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const lastMonth = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      await db.insert(trainingCertifications).values([
-        { workerName: 'John Doe', courseName: 'Forklift Safety', issueDate: lastMonth, expiryDate: threeMonthsLater, status: 'valid' },
-        { workerName: 'Alice Smith', courseName: 'Hazmat Response', issueDate: lastMonth, expiryDate: twoWeeksAway, status: 'expiring_soon' },
-        { workerName: 'Bob Wilson', courseName: 'Confined Space Entry', issueDate: new Date(2023, 1, 1), expiryDate: lastMonth, status: 'expired' },
-      ]);
-    }
+    const training = [
+      { workerName: 'John Doe', courseName: 'Forklift Safety', issueDate: lastMonth, expiryDate: threeMonthsLater, status: 'valid' },
+      { workerName: 'Alice Smith', courseName: 'Hazmat Response', issueDate: lastMonth, expiryDate: twoWeeksAway, status: 'expiring_soon' },
+      { workerName: 'Bob Wilson', courseName: 'Confined Space Entry', issueDate: new Date(2023, 1, 1), expiryDate: lastMonth, status: 'expired' },
+    ];
+    for (const t of training) await storage.createTrainingCertification(t as any);
 
-    const [existingSust] = await db.select({ count: count() }).from(sustainabilityMetrics);
-    if (existingSust.count === 0) {
-      await db.insert(sustainabilityMetrics).values([
-        { area: 'Main Plant', consumption: '1850', carbonFootprint: '740', unit: 'kWh' },
-        { area: 'Assembly Line 1', consumption: '1240', carbonFootprint: '496', unit: 'kWh' },
-      ]);
-    }
-  } else {
+    // Seed Sustainability
+    const sust = [
+      { area: 'Main Plant', consumption: '1850', carbonFootprint: '740', unit: 'kWh' },
+      { area: 'Assembly Line 1', consumption: '1240', carbonFootprint: '496', unit: 'kWh' },
+    ];
+    for (const s of sust) await storage.createSustainabilityMetric(s as any);
+
+  } else if (hasDb && existingAdmin) {
     // Update existing users with hashed password if needed (lite mode hack)
-    if (!users.password.includes('.')) {
-      await storage.updateUser(users.id, { password: hashedPassword });
+    if (!existingAdmin.password.includes('.')) {
+      await storage.updateUser(existingAdmin.id, { password: hashedPassword });
 
       const manager = await storage.getUserByUsername("manager");
       if (manager && !manager.password.includes('.')) {

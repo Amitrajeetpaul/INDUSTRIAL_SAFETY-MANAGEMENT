@@ -9,3 +9,4 @@ vite.config.ts.*
 tmp/
 *.tsbuildinfo
 *.log
+.vercel

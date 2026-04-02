@@ -7,8 +7,13 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User } from "@shared/schema";
+import { pool, hasDb } from "./db";
+import connectPg from "connect-pg-simple";
+import MemoryStoreFactory from "memorystore";
 
 const scryptAsync = promisify(scrypt);
+const PostgresSessionStore = connectPg(session);
+const MemoryStore = MemoryStoreFactory(session);
 
 export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
@@ -29,9 +34,12 @@ export function setupAuth(app: Express) {
     secret: process.env.SESSION_SECRET || "r3pl1t_s3cur1ty_k3y",
     resave: false,
     saveUninitialized: false,
-    store: undefined,
+    store: hasDb && pool 
+      ? new PostgresSessionStore({ pool, createTableIfMissing: true }) 
+      : new MemoryStore({ checkPeriod: 86400000 }),
     cookie: {
       secure: app.get("env") === "production",
+      maxAge: 24 * 60 * 60 * 1000,
     }
   };
 
