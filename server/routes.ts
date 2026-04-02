@@ -369,11 +369,6 @@ async function seedData() {
       { name: 'Safety Harness X', type: 'Harness', serialNumber: 'SH-042', manufactureDate: threeMonthsAgo, lastInspectionDate: threeMonthsAgo, nextInspectionDate: nextWeek, status: 'maintenance_due' },
       { name: 'Pro Boots 2.0', type: 'Boots', serialNumber: 'BT-999', manufactureDate: threeMonthsAgo, lastInspectionDate: threeMonthsAgo, nextInspectionDate: sixMonthsLater, status: 'ok' },
     ];
-    const ppeItems = [
-      { name: 'Hard Hat Elite', type: 'Hard Hat', serialNumber: 'HH-001', manufactureDate: threeMonthsAgo, lastInspectionDate: threeMonthsAgo, nextInspectionDate: sixMonthsLater, status: 'ok' },
-      { name: 'Safety Harness X', type: 'Harness', serialNumber: 'SH-042', manufactureDate: threeMonthsAgo, lastInspectionDate: threeMonthsAgo, nextInspectionDate: nextWeek, status: 'maintenance_due' },
-      { name: 'Pro Boots 2.0', type: 'Boots', serialNumber: 'BT-999', manufactureDate: threeMonthsAgo, lastInspectionDate: threeMonthsAgo, nextInspectionDate: sixMonthsLater, status: 'ok' },
-    ];
     for (const p of ppeItems) await storage.createPPEItem(p as any);
 
     // Seed Safety Measures
