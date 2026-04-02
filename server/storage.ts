@@ -1,4 +1,4 @@
-import { db, hasDb } from "./db";
+import { db, hasDb } from "./db.js";
 import {
   users, incidents, risks, messages, 
   ppeInventory, environmentalMetrics, safetyMeasures,
@@ -12,7 +12,7 @@ import {
   type SafetyMeasure, type InsertSafetyMeasure,
   type TrainingCertification, type InsertTraining,
   type SustainabilityMetric, type InsertSustainability
-} from "@shared/schema";
+} from "@shared/schema.js";
 import { eq, desc, count, sql, asc } from "drizzle-orm";
 
 export interface IStorage {
