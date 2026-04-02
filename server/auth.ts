@@ -156,6 +156,10 @@ export function setupAuth(app: Express) {
       passport.authenticate("google", { failureRedirect: "/login" }),
       (req, res) => res.redirect("/")
     );
+  } else {
+    app.get("/api/auth/google", (req, res) => {
+      res.status(400).send("Google OAuth is not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to Vercel environment variables.");
+    });
   }
 
   app.post("/api/login", (req, res, next) => {
