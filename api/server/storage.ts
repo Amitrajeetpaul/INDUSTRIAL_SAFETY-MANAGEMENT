@@ -65,7 +65,7 @@ export interface IStorage {
 
   // Sustainability
   getSustainabilityMetrics(): Promise<SustainabilityMetric[]>;
-  createSustainabilityMetric(metric: InsertSustainability): Promise<SustainabilityMetric>;
+  createSustainabilityMetric(metric: InsertSustainability & { createdAt?: Date }): Promise<SustainabilityMetric>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -200,7 +200,7 @@ export class DatabaseStorage implements IStorage {
     return await db!.select().from(sustainabilityMetrics).orderBy(desc(sustainabilityMetrics.createdAt));
   }
 
-  async createSustainabilityMetric(metric: InsertSustainability): Promise<SustainabilityMetric> {
+  async createSustainabilityMetric(metric: InsertSustainability & { createdAt?: Date }): Promise<SustainabilityMetric> {
     const [newMetric] = await db!.insert(sustainabilityMetrics).values(metric).returning();
     return newMetric;
   }
@@ -252,11 +252,17 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async getIncidents(): Promise<Incident[]> { return Array.from(this.incidents.values()).sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()); }
+  async getIncidents(): Promise<Incident[]> { 
+    return Array.from(this.incidents.values()).sort((a,b) => {
+      const timeA = a.createdAt?.getTime() || 0;
+      const timeB = b.createdAt?.getTime() || 0;
+      return timeB - timeA;
+    }); 
+  }
   async getIncident(id: number): Promise<Incident | undefined> { return this.incidents.get(id); }
   async createIncident(incident: InsertIncident & { reportedBy: number }): Promise<Incident> {
     const id = this.currentId++;
-    const newIncident = { ...incident, id, status: incident.status || 'open', createdAt: new Date() } as Incident;
+    const newIncident = { ...incident, id, status: (incident as any).status || 'open', createdAt: new Date() } as Incident;
     this.incidents.set(id, newIncident);
     return newIncident;
   }
@@ -268,7 +274,13 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async getRisks(): Promise<Risk[]> { return Array.from(this.risks.values()).sort((a,b) => b.createdAt.getTime() - a.createdAt.getTime()); }
+  async getRisks(): Promise<Risk[]> { 
+    return Array.from(this.risks.values()).sort((a,b) => {
+      const timeA = a.createdAt?.getTime() || 0;
+      const timeB = b.createdAt?.getTime() || 0;
+      return timeB - timeA;
+    }); 
+  }
   async createRisk(risk: InsertRisk): Promise<Risk> {
     const id = this.currentId++;
     const newRisk = { ...risk, id, createdAt: new Date() } as Risk;
@@ -334,9 +346,13 @@ export class MemStorage implements IStorage {
   }
 
   async getSustainabilityMetrics(): Promise<SustainabilityMetric[]> { return Array.from(this.sustainability.values()); }
-  async createSustainabilityMetric(metric: InsertSustainability): Promise<SustainabilityMetric> {
+  async createSustainabilityMetric(metric: InsertSustainability & { createdAt?: Date }): Promise<SustainabilityMetric> {
     const id = this.currentId++;
-    const newMetric = { ...metric, id, createdAt: new Date() } as SustainabilityMetric;
+    const newMetric = { 
+      ...metric, 
+      id, 
+      createdAt: metric.createdAt || new Date() 
+    } as SustainabilityMetric;
     this.sustainability.set(id, newMetric);
     return newMetric;
   }

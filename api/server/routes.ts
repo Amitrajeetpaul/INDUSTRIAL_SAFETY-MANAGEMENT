@@ -392,12 +392,23 @@ async function seedData() {
     ];
     for (const t of training) await storage.createTrainingCertification(t as any);
 
-    // Seed Sustainability
-    const sust = [
-      { area: 'Main Plant', consumption: '1850', carbonFootprint: '740', unit: 'kWh' },
-      { area: 'Assembly Line 1', consumption: '1240', carbonFootprint: '496', unit: 'kWh' },
-    ];
-    for (const s of sust) await storage.createSustainabilityMetric(s as any);
+    // Seed Sustainability (24-hour history for graphs)
+    const areas = ["Main Plant", "Assembly Line 1", "Assembly Line 2", "Warehouse"];
+    for (const area of areas) {
+      for (let i = 24; i >= 0; i--) {
+        const timestamp = new Date(Date.now() - i * 60 * 60 * 1000);
+        const baseConsumption = area === "Main Plant" ? 180 : area === "Warehouse" ? 50 : 120;
+        const consumption = (baseConsumption + Math.random() * 20).toFixed(1);
+        const carbon = (parseFloat(consumption) * 0.4).toFixed(1);
+        await storage.createSustainabilityMetric({
+          area,
+          consumption,
+          carbonFootprint: carbon,
+          unit: "kWh",
+          createdAt: timestamp
+        } as any);
+      }
+    }
 
   } else if (hasDb && existingAdmin) {
     // Update existing users with hashed password if needed (lite mode hack)

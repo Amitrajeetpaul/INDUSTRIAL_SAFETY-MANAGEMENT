@@ -29,10 +29,11 @@ export default function Sustainability() {
     refetchInterval: 10000 
   });
 
-  const recentMetrics = metrics?.slice(0, 15).reverse().map(m => ({
+  const recentMetrics = metrics?.slice(0, 30).reverse().map(m => ({
     ...m,
     consumption: Math.max(0, parseFloat(String(m.consumption)) || 0),
-    carbon: Math.max(0, parseFloat(String(m.carbonFootprint)) || 0)
+    carbon: Math.max(0, parseFloat(String(m.carbonFootprint)) || 0),
+    time: m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
   })) || [];
 
   const areaGroups = metrics?.reduce((acc, m) => {
@@ -49,7 +50,25 @@ export default function Sustainability() {
     consumption: data.count > 0 ? Math.round(data.consumption / data.count) : 0
   })).sort((a,b) => b.consumption - a.consumption);
 
+  const totalCons = metrics?.reduce((sum, m) => sum + (parseFloat(String(m.consumption)) || 0), 0) || 0;
+  const totalCarbon = (metrics?.reduce((sum, m) => sum + (parseFloat(String(m.carbonFootprint)) || 0), 0) || 0) / 1000;
+
   const COLORS = ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B"];
+
+  if (isLoading) {
+    return (
+      <div className="p-8 space-y-8 max-w-7xl mx-auto animate-pulse">
+        <div className="h-20 bg-muted rounded-xl" />
+        <div className="grid md:grid-cols-4 gap-6">
+          {[1,2,3,4].map(i => <div key={i} className="h-32 bg-muted rounded-xl" />)}
+        </div>
+        <div className="grid lg:grid-cols-2 gap-8">
+          <div className="h-[400px] bg-muted rounded-xl" />
+          <div className="h-[400px] bg-muted rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -74,7 +93,7 @@ export default function Sustainability() {
                <ArrowUpRight className="w-4 h-4 text-muted-foreground" />
             </div>
             <p className="text-xs font-bold text-muted-foreground uppercase mb-1">Total Consumption</p>
-            <h3 className="text-2xl font-black">4,285 <span className="text-sm font-medium">kWh</span></h3>
+            <h3 className="text-2xl font-black">{totalCons.toLocaleString()} <span className="text-sm font-medium">kWh</span></h3>
           </CardContent>
         </Card>
 
@@ -87,7 +106,7 @@ export default function Sustainability() {
                <div className="text-[10px] font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded">-12%</div>
             </div>
             <p className="text-xs font-bold text-muted-foreground uppercase mb-1">Carbon Footprint</p>
-            <h3 className="text-2xl font-black">1.7 <span className="text-sm font-medium">tons CO2</span></h3>
+            <h3 className="text-2xl font-black">{totalCarbon.toFixed(1)} <span className="text-sm font-medium">tons CO2</span></h3>
           </CardContent>
         </Card>
 
@@ -116,93 +135,105 @@ export default function Sustainability() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
-          <CardHeader className="bg-blue-600/10 border-b border-blue-600/10">
-            <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-              <Zap className="w-4 h-4 text-blue-500" />
-              Live Power Load
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-             <div className="h-[300px]">
-               <ResponsiveContainer width="100%" height="100%">
-                 <AreaChart data={recentMetrics}>
-                    <defs>
-                      <linearGradient id="colorCons" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
-                    <XAxis 
-                       dataKey="createdAt" 
-                       hide 
-                    />
-                    <YAxis 
-                      stroke="#888888" 
-                      fontSize={12} 
-                      tickLine={false} 
-                      axisLine={false}
-                      tickFormatter={(val) => `${val}kW`}
-                    />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#111', border: 'none', borderRadius: '8px' }}
-                      itemStyle={{ color: '#fff' }}
-                      labelClassName="hidden"
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="consumption" 
-                      stroke="#3B82F6" 
-                      fillOpacity={1} 
-                      fill="url(#colorCons)" 
-                      strokeWidth={3}
-                    />
-                 </AreaChart>
-               </ResponsiveContainer>
-             </div>
-          </CardContent>
-        </Card>
+      {!metrics || metrics.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-[400px] border-2 border-dashed rounded-xl border-muted bg-muted/20">
+          <Factory className="w-12 h-12 text-muted-foreground mb-4 opacity-20" />
+          <h3 className="text-xl font-bold text-muted-foreground">Initializing Simulation Data...</h3>
+          <p className="text-sm text-muted-foreground max-w-xs text-center">We are generating historical logs to populate your charts. This will take a moment.</p>
+        </div>
+      ) : (
+        <div className="grid lg:grid-cols-2 gap-8">
+          <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
+            <CardHeader className="bg-blue-600/10 border-b border-blue-600/10">
+              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                <Zap className="w-4 h-4 text-blue-500" />
+                Live Power Load
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+               <div className="h-[300px]">
+                 <ResponsiveContainer width="100%" height="100%">
+                   <AreaChart data={recentMetrics}>
+                      <defs>
+                        <linearGradient id="colorCons" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#88888822" />
+                      <XAxis 
+                         dataKey="time" 
+                         fontSize={10}
+                         stroke="#888888"
+                         tickLine={false}
+                         axisLine={false}
+                         minTickGap={30}
+                      />
+                      <YAxis 
+                        stroke="#888888" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={false}
+                        tickFormatter={(val) => `${val}kW`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#111', border: 'none', borderRadius: '8px' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="consumption" 
+                        stroke="#3B82F6" 
+                        fillOpacity={1} 
+                        fill="url(#colorCons)" 
+                        strokeWidth={3}
+                        animationDuration={1500}
+                      />
+                   </AreaChart>
+                 </ResponsiveContainer>
+               </div>
+            </CardContent>
+          </Card>
 
-        <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
-          <CardHeader className="bg-green-600/10 border-b border-green-600/10">
-            <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
-              <Factory className="w-4 h-4 text-green-500" />
-              Regional Consumption
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-             <div className="h-[300px]">
-               <ResponsiveContainer width="100%" height="100%">
-                 <BarChart data={barData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#88888822" />
-                    <XAxis type="number" hide />
-                    <YAxis 
-                      dataKey="name" 
-                      type="category" 
-                      stroke="#888888" 
-                      fontSize={10} 
-                      tickLine={false} 
-                      axisLine={false}
-                      width={100}
-                    />
-                    <Tooltip 
-                      cursor={{ fill: 'transparent' }}
-                      contentStyle={{ backgroundColor: '#111', border: 'none', borderRadius: '8px' }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                    <Bar dataKey="consumption" radius={[0, 4, 4, 0]} barSize={20}>
-                      {barData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                 </BarChart>
-               </ResponsiveContainer>
-             </div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="border-none shadow-xl bg-background/50 backdrop-blur-sm overflow-hidden">
+            <CardHeader className="bg-green-600/10 border-b border-green-600/10">
+              <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                <Factory className="w-4 h-4 text-green-500" />
+                Regional Consumption
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+               <div className="h-[300px]">
+                 <ResponsiveContainer width="100%" height="100%">
+                   <BarChart data={barData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#88888822" />
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category" 
+                        stroke="#888888" 
+                        fontSize={10} 
+                        tickLine={false} 
+                        axisLine={false}
+                        width={100}
+                      />
+                      <Tooltip 
+                        cursor={{ fill: 'transparent' }}
+                        contentStyle={{ backgroundColor: '#111', border: 'none', borderRadius: '8px' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                      <Bar dataKey="consumption" radius={[0, 4, 4, 0]} barSize={20}>
+                        {barData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                   </BarChart>
+                 </ResponsiveContainer>
+               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <div className="rounded-xl bg-primary/5 p-6 border border-primary/10 flex items-center gap-6">
         <div className="p-4 bg-primary/20 rounded-full text-primary">
