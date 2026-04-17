@@ -268,19 +268,87 @@ export async function registerRoutes(
     res.json(sorted.slice(0, 100));
   });
 
-  // --- PDF Export (Mock) ---
+  // --- PDF Export (Real) ---
   app.get('/api/incidents/:id/pdf', async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const incident = await storage.getIncident(Number(req.params.id));
     if (!incident) return res.status(404).json({ message: "Incident not found" });
     
-    // In a real app, we'd use jspdf or similar. 
-    // For this premium demo, we'll return a JSON with a message 
-    // that the frontend will use to trigger a styled print or a mock download.
-    res.json({ 
-      message: "PDF Report generated successfully", 
-      filename: `Incident_Report_${incident.id}.pdf` 
-    });
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      
+      // Professional Header
+      doc.setFillColor(30, 41, 59); // Slate-800
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text("INDUSAFE SAFETY REPORT", 20, 25);
+      
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 150, 25);
+      
+      // Incident Details
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(16);
+      doc.text("Incident Information", 20, 60);
+      
+      doc.setDrawColor(200, 200, 200);
+      doc.line(20, 65, 190, 65);
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Title:", 20, 80);
+      doc.setFont("helvetica", "normal");
+      doc.text(String(incident.title), 60, 80);
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Location:", 20, 95);
+      doc.setFont("helvetica", "normal");
+      doc.text(String(incident.location), 60, 95);
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Severity:", 20, 110);
+      doc.setFont("helvetica", "normal");
+      doc.text(String(incident.severity).toUpperCase(), 60, 110);
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Status:", 20, 125);
+      doc.setFont("helvetica", "normal");
+      doc.text(String(incident.status).replace('_', ' ').toUpperCase(), 60, 125);
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("Reported At:", 20, 140);
+      doc.setFont("helvetica", "normal");
+      doc.text(incident.createdAt ? new Date(incident.createdAt).toLocaleDateString() : 'N/A', 60, 140);
+      
+      // Description / Footer
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Safety Analysis", 20, 160);
+      doc.line(20, 165, 190, 165);
+      
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "normal");
+      const splitText = doc.splitTextToSize("This incident was automatically logged by the InduSafe Industrial Control System. Standard operating procedures require immediate review of this sector and environmental checks to prevent recurrence.", 170);
+      doc.text(splitText, 20, 175);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text("InduSafe Enterprise Safety Management System | Confidential Report", 105, 280, { align: "center" });
+
+      const pdfOutput = doc.output('arraybuffer');
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=Incident_Report_${incident.id}.pdf`);
+      res.send(Buffer.from(pdfOutput));
+
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      res.status(500).json({ message: "Failed to generate PDF report" });
+    }
   });
 
   // --- Seed Data ---

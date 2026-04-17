@@ -33,19 +33,28 @@ export default function Incidents() {
   const downloadPDF = async (id: number) => {
     setExportingId(id);
     try {
-      // Simulate real generation delay
-      await new Promise(r => setTimeout(r, 1500));
       const res = await fetch(`/api/incidents/${id}/pdf`);
-      const data = await res.json();
+      if (!res.ok) throw new Error("Failed to generate PDF");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `Incident_Report_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
       toast({
         title: "📄 Report Ready",
-        description: `${data.message}. Initializing download for ${data.filename}...`,
+        description: "Incident report downloaded successfully.",
       });
     } catch (err) {
       toast({
         variant: "destructive",
         title: "Export Failed",
-        description: "Communication error with the report server.",
+        description: "Internal server error during PDF generation.",
       });
     } finally {
       setExportingId(null);
